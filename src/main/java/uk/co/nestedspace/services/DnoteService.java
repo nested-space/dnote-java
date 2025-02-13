@@ -81,14 +81,12 @@ public class DnoteService {
     }
 
     public Single<NoteDAO> fetchNoteByUUID(String authKey, String uuid) {
-        String url = "/api/v3/notes/" + uuid;
+        String url = "notes/" + uuid;
         System.out.println("Connecting to: " + url);
 
         HttpRequest<?> request = HttpRequest.GET(url)
                 .header("Authorization", "Bearer " + authKey)
                 .header("Content-Type", "application/json");
-
-        System.out.println("Sending GET request...");
 
         return Single.fromPublisher(httpClient.retrieve(request))
                 .map(responseBody -> {

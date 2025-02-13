@@ -27,6 +27,15 @@ public class Note {
         parseContent(content);
     }
 
+    public boolean isWaiting() {
+        return isWaiting;
+    }
+
+    public boolean isOverdue(){
+        System.out.println(LocalDate.now().isBefore(neededBy.minusDays(1)));
+        return LocalDate.now().isAfter(neededBy.minusDays(1));
+    }
+
     public String getUuid() {
         return uuid;
     }
@@ -34,6 +43,14 @@ public class Note {
     public String getContent() {
         String waitingString = isWaiting ? WAIT_FLAG + SEPARATOR : "";
         return waitingString + neededBy.format(formatter) + SEPARATOR + message;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public LocalDate getNeededBy() {
+        return neededBy;
     }
 
     public int getUsn() {
@@ -44,12 +61,8 @@ public class Note {
         return book.getLabel();
     }
 
-    public String dateAsString(){
+    public String getDateAsString(){
         return neededBy.format(formatter);
-    }
-
-    public String message(){
-        return message;
     }
 
     public void setContent(boolean isWaiting, LocalDate neededBy, String message){

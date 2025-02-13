@@ -15,20 +15,19 @@
 
         <h1 class="text-2xl font-bold mb-4">Note Details</h1>
 
-        <p class="text-gray-700 whitespace-pre-wrap">{{ note.message }}</p>
+        <textarea class="w-full p-2 border rounded" placeholder="Enter message here">{{ note.message }}</textarea>
 
         <div class="grid grid-cols-2 gap-4 mt-4">
             <div>
                 <h2 class="text-lg font-semibold">When is it due?</h2>
-                {% if note.isOverdue %}
-                <p class="text-red-600 font-semibold">{{ note.dateAsString }}</p>
-                {% else %}
-                <p class="text-gray-700">{{ note.dateAsString }}</p>
-                {% endif %}
+                <input type="date" class="border p-2 rounded" value="{{ note.neededBy }}">
             </div>
             <div>
                 <h2 class="text-lg font-semibold">Is it waiting?</h2>
-                <p class="text-gray-700">{{ note.isWaiting ? 'Yes' : 'No' }}</p>
+                <label class="flex items-center">
+                    <input type="checkbox" class="form-checkbox" {% if note.isWaiting %}checked{% endif %}>
+                    <span class="ml-2">Waiting</span>
+                </label>
             </div>
         </div>
     </div>

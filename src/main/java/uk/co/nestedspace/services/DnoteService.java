@@ -9,10 +9,18 @@ import io.micronaut.http.client.annotation.Client;
 import io.micronaut.json.JsonMapper;
 import io.micronaut.serde.annotation.Serdeable;
 import io.reactivex.rxjava3.core.Single;
+import io.reactivex.rxjava3.disposables.Disposable;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import uk.co.nestedspace.dao.NoteDAO;
 import uk.co.nestedspace.dao.NotesResponseDAO;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.Map;
 
 @Singleton
 public class DnoteService {
@@ -36,32 +44,37 @@ public class DnoteService {
      * Authenticate with Dnote API and get the authentication key.
      */
     public Single<String> authenticate() {
-        AuthRequest authRequest = new AuthRequest(email, password);
+        System.out.println("Authenticating");
+        AuthResponse cachedToken = loadAuthToken();
+        if (cachedToken != null && (System.currentTimeMillis() / 1000) < cachedToken.getExpires_at()) {
+            return Single.just(cachedToken.getKey());
+        }
 
+        AuthRequest authRequest = new AuthRequest(email, password);
         HttpRequest<AuthRequest> request = HttpRequest.POST("signin", authRequest)
                 .header(HttpHeaders.CONTENT_TYPE, "application/json");
 
         return Single.fromPublisher(httpClient.exchange(request, AuthResponse.class))
                 .map(response -> {
-                    System.out.println("Auth Response Status: " + response.getStatus().getCode());
-
                     if (response.getBody().isPresent()) {
-                        return response.getBody().get().getKey();
+                        AuthResponse authResponse = response.getBody().get();
+                        saveAuthToken(authResponse);
+                        return authResponse.getKey();
                     } else {
-                        System.out.println("Auth Response Body is empty!");
-                        return "";
+                        return "Auth Response Body is empty!";
                     }
                 })
-                .onErrorReturn(throwable -> {
-                    System.out.println("Authentication Error: " + throwable.getMessage());
-                    return "";
-                });
+                .onErrorReturn(throwable -> "Authentication Error:" + throwable.getMessage());
     }
 
     /**
      * Fetch notes from the Dnote API.
      */
-    public Single<NotesResponseDAO> fetchNotes(String authKey) {
+    public Single<NotesResponseDAO> fetchNotes() {
+        return authenticate().flatMap(this::fetchNotesWithToken);
+    }
+
+    private Single<NotesResponseDAO> fetchNotesWithToken(String authKey) {
         HttpRequest<?> request = HttpRequest.GET("notes")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + authKey);
 
@@ -75,43 +88,95 @@ public class DnoteService {
                         return new NotesResponseDAO();
                     }
                 })
-                .onErrorReturn(throwable -> {
-                    return new NotesResponseDAO();
-                });
+                .onErrorResumeNext(throwable -> {
+                    if (isAuthError(throwable)) {
+                        invalidateCachedToken();
+                        return authenticate().flatMap(this::fetchNotesWithToken);
+                    }
+                    return Single.error(throwable);
+                })
+                .onErrorReturn(throwable -> new NotesResponseDAO());
     }
 
-    public Single<NoteDAO> fetchNoteByUUID(String authKey, String uuid) {
-        String url = "notes/" + uuid;
-        System.out.println("Connecting to: " + url);
+    public Single<NoteDAO> fetchNoteByUUID(String uuid){
+        return authenticate().flatMap(token -> fetchNoteByUUIDWithToken(token, uuid));
+    }
 
+    private Single<NoteDAO> fetchNoteByUUIDWithToken(String authKey, String uuid) {
+        String url = "notes/" + uuid;
         HttpRequest<?> request = HttpRequest.GET(url)
                 .header("Authorization", "Bearer " + authKey)
                 .header("Content-Type", "application/json");
 
         return Single.fromPublisher(httpClient.retrieve(request))
                 .map(responseBody -> {
-                    System.out.println("Response Body: " + responseBody);
                     return jsonMapper.readValue(responseBody, NoteDAO.class);
-                });
+                })
+                .onErrorResumeNext(throwable -> {
+                    if (isAuthError(throwable)) {
+                        invalidateCachedToken();
+                        return authenticate().flatMap(token -> fetchNoteByUUIDWithToken(token, uuid));
+                    }
+                    return Single.error(throwable);
+                })
+                .onErrorReturn(throwable -> new NoteDAO("", "Error fetching Note from API"));
     }
 
-    /**
-     * Update a note's content in Dnote.
-     */
-    public Single<Boolean> updateNote(String authKey, String noteUuid, String updatedContent) {
-        HttpRequest<?> request = HttpRequest.PATCH("notes/" + noteUuid, new UpdateRequest(updatedContent))
-                .header(HttpHeaders.CONTENT_TYPE, "application/json")
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + authKey);
+    public Disposable updateNoteByUUID(NoteDAO note) {
+        String authKey = authenticate().blockingGet();
 
-        return Single.fromPublisher(httpClient.exchange(request, String.class))
-                .map(response -> response.getStatus().getCode() == 200)
-                .onErrorReturn(throwable -> false);
+        System.out.println("Doing it");
+        String url = "notes/" + note.getUuid();
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("content", note.getContent());
+        body.put("public", true);
+        HttpRequest<?> request = HttpRequest.PATCH(url, body)
+                .header("Authorization", "Bearer " + authKey)
+                .header("Content-Type", "application/json");
+
+        return Single.fromPublisher(httpClient.retrieve(request))
+                .map(responseBody -> jsonMapper.readValue(responseBody, NoteDAO.class))
+                .subscribe();
+    }
+
+    private boolean isAuthError(Throwable throwable) {
+        return throwable.getMessage().contains("401") || throwable.getMessage().toLowerCase().contains("unauthorized");
+    }
+
+    private void saveAuthToken(AuthResponse authResponse) {
+        try {
+            String json = jsonMapper.writeValueAsString(authResponse);
+            Files.write(Paths.get("dnote_token.json"), json.getBytes());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private AuthResponse loadAuthToken() {
+        try {
+            Path path = Paths.get("dnote_token.json");
+            if (Files.exists(path)) {
+                String json = new String(Files.readAllBytes(path));
+                return jsonMapper.readValue(json, AuthResponse.class);
+            }
+        } catch (IOException e) {
+            e.getMessage();
+        }
+        return null;
+    }
+
+    private void invalidateCachedToken() {
+        try {
+            Files.deleteIfExists(Paths.get("dnote_token.json"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
      * Models
      */
-
     @Serdeable
     public static class AuthRequest {
         private String email;
@@ -140,8 +205,10 @@ public class DnoteService {
     }
 
     @Serdeable.Deserializable
+    @Serdeable.Serializable
     public static class AuthResponse {
         private String key;
+        private long expires_at;
 
         public String getKey() {
             return key;
@@ -149,6 +216,14 @@ public class DnoteService {
 
         public void setKey(String key) {
             this.key = key;
+        }
+
+        public long getExpires_at() {
+            return expires_at;
+        }
+
+        public void setExpires_at(long expires_at) {
+            this.expires_at = expires_at;
         }
     }
 
@@ -168,4 +243,6 @@ public class DnoteService {
             this.content = content;
         }
     }
+
 }
+

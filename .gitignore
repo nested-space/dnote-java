@@ -13,3 +13,6 @@ out/
 .settings
 .classpath
 .factorypath
+
+# Don't upload auth tokens to github...
+dnote_token.json

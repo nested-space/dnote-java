@@ -32,7 +32,6 @@ public class Note {
     }
 
     public boolean isOverdue(){
-        System.out.println(LocalDate.now().isBefore(neededBy.minusDays(1)));
         return LocalDate.now().isAfter(neededBy.minusDays(1));
     }
 
@@ -81,6 +80,10 @@ public class Note {
             isWaiting = true;
             neededBy = parseDate(contents[1]);
             message = contents[2];
+        } else if (contents.length == 1) {
+            isWaiting = false;
+            neededBy = LocalDate.MAX;
+            message = contents[0];
         } else {
             //isWaiting already false//
             neededBy = parseDate(contents[0]);
@@ -96,7 +99,6 @@ public class Note {
         try {
             date = LocalDate.parse(dateString, formatter);
         } catch (DateTimeParseException e) {
-            System.out.println("Error parsing date: " + dateString);
             date = LocalDate.MAX;
         }
 

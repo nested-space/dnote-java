@@ -16,6 +16,11 @@ public class NoteDAO {
     private BookDAO book;
     private UserDAO user;
 
+    public NoteDAO(String uuid, String content){
+        this.uuid = uuid;
+        this.content = content;
+    }
+
     // Getters and Setters
     public String getUuid() { return uuid; }
     public void setUuid(String uuid) { this.uuid = uuid; }
@@ -51,4 +56,8 @@ public class NoteDAO {
                 getUsn(),
                 getBook().factory());
     }
+
+//    public String update(){
+//
+//    }
 }

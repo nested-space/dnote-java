@@ -21,22 +21,15 @@ public class TodoController {
     @View("todo")
     @Get("/")
     public Single<Map<String, Object>> getNotes() {
-        return dnoteService.authenticate()
-                .flatMap(authKey -> {
-                    if (!authKey.isEmpty()) {
-                        return dnoteService.fetchNotes(authKey)
-                                .map(notesResponse -> {
-                                    if (notesResponse == null || notesResponse.getNotes() == null) {
-                                        System.out.println("NotesResponse is null or has no notes.");
-                                        return Map.of("error", "No notes found");
-                                    }
-
-                                    List<Note> notes = notesResponse.factory();
-                                    notes.sort(Comparator.comparing(Note::getNeededBy));
-                                    return Map.of("notes", notes);
-                                });
+        return dnoteService.fetchNotes()
+                .map(notesResponse -> {
+                    if (notesResponse == null || notesResponse.getNotes() == null) {
+                        return Map.of("error", "NotesResponse is null or has no notes.");
                     }
-                    return Single.just(Map.of("error", "Authentication failed"));
+
+                    List<Note> notes = notesResponse.factory();
+                    notes.sort(Comparator.comparing(Note::getNeededBy));
+                    return Map.of("notes", notes);
                 });
     }
 }

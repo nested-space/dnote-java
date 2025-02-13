@@ -3,6 +3,7 @@ package uk.co.nestedspace.services;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpRequest;
+import io.micronaut.http.HttpResponse;
 import io.micronaut.http.client.HttpClient;
 import io.micronaut.http.client.annotation.Client;
 import io.micronaut.json.JsonMapper;
@@ -10,6 +11,7 @@ import io.micronaut.serde.annotation.Serdeable;
 import io.reactivex.rxjava3.core.Single;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import uk.co.nestedspace.dao.NoteDAO;
 import uk.co.nestedspace.dao.NotesResponseDAO;
 
 @Singleton
@@ -75,6 +77,23 @@ public class DnoteService {
                 })
                 .onErrorReturn(throwable -> {
                     return new NotesResponseDAO();
+                });
+    }
+
+    public Single<NoteDAO> fetchNoteByUUID(String authKey, String uuid) {
+        String url = "/api/v3/notes/" + uuid;
+        System.out.println("Connecting to: " + url);
+
+        HttpRequest<?> request = HttpRequest.GET(url)
+                .header("Authorization", "Bearer " + authKey)
+                .header("Content-Type", "application/json");
+
+        System.out.println("Sending GET request...");
+
+        return Single.fromPublisher(httpClient.retrieve(request))
+                .map(responseBody -> {
+                    System.out.println("Response Body: " + responseBody);
+                    return jsonMapper.readValue(responseBody, NoteDAO.class);
                 });
     }
 

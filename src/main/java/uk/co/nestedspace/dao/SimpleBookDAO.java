@@ -4,7 +4,7 @@ import io.micronaut.serde.annotation.Serdeable;
 import uk.co.nestedspace.models.Book;
 
 @Serdeable.Deserializable
-public class BookDAO {
+public class SimpleBookDAO {
     private String uuid;
     private String label;
 

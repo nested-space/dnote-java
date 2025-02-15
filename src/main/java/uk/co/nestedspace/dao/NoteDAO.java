@@ -13,7 +13,7 @@ public class NoteDAO {
     private int addedOn;
     private boolean isPublic;
     private int usn;
-    private BookDAO book;
+    private SimpleBookDAO book;
     private UserDAO user;
 
     public NoteDAO(String uuid, String content){
@@ -44,8 +44,8 @@ public class NoteDAO {
     public int getUsn() { return usn; }
     public void setUsn(int usn) { this.usn = usn; }
 
-    public BookDAO getBook() { return book; }
-    public void setBook(BookDAO book) { this.book = book; }
+    public SimpleBookDAO getBook() { return book; }
+    public void setBook(SimpleBookDAO book) { this.book = book; }
 
     public UserDAO getUser() { return user; }
     public void setUser(UserDAO user) { this.user = user; }

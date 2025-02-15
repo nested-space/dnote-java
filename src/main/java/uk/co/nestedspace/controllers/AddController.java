@@ -1,7 +1,6 @@
 package uk.co.nestedspace.controllers;
 
 import io.micronaut.core.annotation.Introspected;
-import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.MediaType;
 import io.micronaut.http.annotation.Body;
@@ -10,13 +9,17 @@ import io.micronaut.http.annotation.Get;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.serde.annotation.Serdeable;
 import io.micronaut.views.View;
+import io.reactivex.rxjava3.core.Completable;
 import jakarta.inject.Inject;
+import uk.co.nestedspace.dao.SimpleBookDAO;
 import uk.co.nestedspace.models.Note;
 import uk.co.nestedspace.services.DnoteService;
 
+import java.io.IOException;
 import java.net.URI;
 import java.time.LocalDate;
-import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Controller("/tasks/add")
@@ -28,7 +31,10 @@ public class AddController {
     @View("add")
     @Get(produces = MediaType.TEXT_HTML)
     public Map<String, Object> addNote() {
-        return Collections.emptyMap();
+        Map<String, Object> objects = new HashMap<>();
+        objects.put("today", LocalDate.now());
+        objects.put("books", dnoteService.fetchBooks().blockingGet());
+        return objects;
     }
 
     @Post(consumes = MediaType.APPLICATION_FORM_URLENCODED)
@@ -38,10 +44,14 @@ public class AddController {
                 form.getMessage(),
                 Boolean.parseBoolean(form.getIsWaiting()),
                 LocalDate.parse(form.getNeededBy()));
-        System.out.println(note.getContent());
 
-        //Completable result = dnoteService.addTask(form.bookUUID, note.getContent());
-        //result.blockingAwait();  // Don't redirect until operation is complete
+        Completable result = null;
+        try {
+            result = dnoteService.addTask(form.bookUUID, note.getContent());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        result.blockingAwait();  // Don't redirect until operation is complete
 
         return HttpResponse.redirect(URI.create("/tasks"));
     }

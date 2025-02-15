@@ -53,7 +53,14 @@
         <h1 class="text-2xl font-bold mb-4">Task Details</h1>
 
         <form action="/tasks/add" method="post" onsubmit="return validateForm(event)">
-            <input type="hidden" name="uuid">
+            <div class="mt-4">
+                <h2 class="text-lg font-semibold">Select Book</h2>
+                <select name="bookUUID" class="w-full p-2 border rounded">
+                    {% for book in books %}
+                    <option value="{{ book.uuid }}">{{ book.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
             <textarea class="w-full p-2 border rounded" name="message" placeholder="Enter message here"></textarea>
 

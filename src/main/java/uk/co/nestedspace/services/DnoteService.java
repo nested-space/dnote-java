@@ -1,7 +1,9 @@
 package uk.co.nestedspace.services;
 
 import io.micronaut.context.annotation.Value;
+import io.micronaut.core.type.Argument;
 import io.micronaut.http.HttpHeaders;
+import io.micronaut.http.HttpMethod;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.client.HttpClient;
 import io.micronaut.http.client.annotation.Client;
@@ -9,18 +11,19 @@ import io.micronaut.json.JsonMapper;
 import io.micronaut.serde.annotation.Serdeable;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Single;
-import io.reactivex.rxjava3.disposables.Disposable;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import uk.co.nestedspace.dao.NoteDAO;
 import uk.co.nestedspace.dao.NotesResponseDAO;
-import uk.co.nestedspace.models.Note;
+import uk.co.nestedspace.dao.SimpleBookDAO;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Singleton
@@ -67,9 +70,30 @@ public class DnoteService {
                 .onErrorReturn(throwable -> "Authentication Error:" + throwable.getMessage());
     }
 
-    /**
-     * Fetch notes from the Dnote API.
-     */
+    public Single<List<SimpleBookDAO>> fetchBooks() {
+        String authKey = authenticate().blockingGet();
+
+        String url = "books";
+
+        HttpRequest<?> request = HttpRequest.GET(url)
+                .header("Authorization", "Bearer " + authKey)
+                .header("Content-Type", "application/json");
+
+        return Single.fromPublisher(httpClient.retrieve(request))
+                .map(responseBody ->
+                        jsonMapper.readValue(responseBody, Argument.listOf(SimpleBookDAO.class)
+                        )
+                )
+                .onErrorResumeNext(throwable -> {
+                    if (isAuthError(throwable)) {
+                        invalidateCachedToken();
+                        return fetchBooks();
+                    }
+                    return Single.error(throwable);
+                })
+                .onErrorReturn(throwable -> Collections.emptyList());
+    }
+
     public Single<NotesResponseDAO> fetchNotes() {
         return authenticate().flatMap(this::fetchNotesWithToken);
     }
@@ -98,7 +122,7 @@ public class DnoteService {
                 .onErrorReturn(throwable -> new NotesResponseDAO());
     }
 
-    public Single<NoteDAO> fetchNoteByUUID(String uuid){
+    public Single<NoteDAO> fetchNoteByUUID(String uuid) {
         return authenticate().flatMap(token -> fetchNoteByUUIDWithToken(token, uuid));
     }
 
@@ -139,16 +163,17 @@ public class DnoteService {
                 .ignoreElement();
     }
 
-    public Completable addTask(String bookUUID, String content){
+    public Completable addTask(String bookUUID, String content) throws IOException {
         String authKey = authenticate().blockingGet();
 
-        String url = "notes/";
+        String url = "notes";
 
         Map<String, Object> body = new HashMap<>();
         body.put("book_uuid", bookUUID);
         body.put("content", content);
 
-        HttpRequest<?> request = HttpRequest.POST(url, body)
+        HttpRequest<?> request = HttpRequest.create(HttpMethod.POST, url)
+                .body(body)
                 .header("Authorization", "Bearer " + authKey)
                 .header("Content-Type", "application/json");
 

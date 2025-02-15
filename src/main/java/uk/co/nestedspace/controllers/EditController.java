@@ -24,10 +24,12 @@ public class EditController {
     @Post(consumes = MediaType.APPLICATION_FORM_URLENCODED)
     public HttpResponse<?> editTask(@Body TaskEditForm form) {
         Note note = new Note(
-                form.uuid,
+                form.getUuid(),
                 form.getMessage(),
-                form.isWaiting(),
+                Boolean.parseBoolean(form.getIsWaiting()),
                 LocalDate.parse(form.getNeededBy()));
+
+        System.out.println(note.getContent());
 
         Completable result = dnoteService.updateNoteContentByUUID(NoteDAO.fromNote(note));
         result.blockingAwait();  // Don't redirect until operation is complete
@@ -41,7 +43,7 @@ public class EditController {
         private String uuid;
         private String message;
         private String neededBy;
-        private boolean isWaiting;
+        private String isWaiting;
 
         public String getUuid() { return uuid; }
         public void setUuid(String uuid) { this.uuid = uuid; }
@@ -52,12 +54,15 @@ public class EditController {
         public String getNeededBy() { return neededBy; }
         public void setNeededBy(String neededBy) { this.neededBy = neededBy; }
 
-        public boolean isWaiting() { return isWaiting; }
-        public void setWaiting(boolean waiting) { isWaiting = waiting; }
+        public String getIsWaiting() { return isWaiting; }
+
+        public void setIsWaiting(String isWaiting) {
+            this.isWaiting = String.valueOf("true".equalsIgnoreCase(isWaiting));
+        }
 
         @Override
         public String toString() {
-            return String.format("UUID: %s\nMessage: %s\nisWaiting: %s\nneededBy: %s", uuid, message, isWaiting, neededBy);
+            return String.format("Book UUID: %s\nMessage: %s\nisWaiting: %s\nneededBy: %s", uuid, message, isWaiting, neededBy);
         }
     }
 }

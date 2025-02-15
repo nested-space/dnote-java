@@ -11,9 +11,11 @@ import io.micronaut.http.annotation.Post;
 import io.micronaut.serde.annotation.Serdeable;
 import io.micronaut.views.View;
 import jakarta.inject.Inject;
+import uk.co.nestedspace.models.Note;
 import uk.co.nestedspace.services.DnoteService;
 
 import java.net.URI;
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.Map;
 
@@ -31,13 +33,12 @@ public class AddController {
 
     @Post(consumes = MediaType.APPLICATION_FORM_URLENCODED)
     public HttpResponse<?> addTask(@Body TaskAddForm form) {
-//        Note note = new Note(
-//                form.getBookUUID(),
-//                form.getMessage(),
-//                form.getIsWaiting(),
-//                LocalDate.parse(form.getNeededBy()));
-        System.out.println("Is Waiting? \t" + form.isWaiting);
-//        System.out.println(note.getContent());
+        Note note = new Note(
+                form.getBookUUID(),
+                form.getMessage(),
+                Boolean.parseBoolean(form.getIsWaiting()),
+                LocalDate.parse(form.getNeededBy()));
+        System.out.println(note.getContent());
 
         //Completable result = dnoteService.addTask(form.bookUUID, note.getContent());
         //result.blockingAwait();  // Don't redirect until operation is complete

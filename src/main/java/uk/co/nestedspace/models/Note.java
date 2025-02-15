@@ -92,7 +92,7 @@ public class Note {
             neededBy = LocalDate.MAX;
             message = contents[0];
         } else {
-            //isWaiting already false//
+            //getIsWaiting already false//
             neededBy = parseDate(contents[0]);
             message = contents[1];
         }

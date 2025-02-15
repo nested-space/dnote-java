@@ -14,6 +14,7 @@ import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import uk.co.nestedspace.dao.NoteDAO;
 import uk.co.nestedspace.dao.NotesResponseDAO;
+import uk.co.nestedspace.models.Note;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -130,6 +131,24 @@ public class DnoteService {
         body.put("content", note.getContent());
         body.put("public", true);
         HttpRequest<?> request = HttpRequest.PATCH(url, body)
+                .header("Authorization", "Bearer " + authKey)
+                .header("Content-Type", "application/json");
+
+        return Single.fromPublisher(httpClient.retrieve(request))
+                .map(responseBody -> jsonMapper.readValue(responseBody, NoteDAO.class))
+                .ignoreElement();
+    }
+
+    public Completable addTask(String bookUUID, String content){
+        String authKey = authenticate().blockingGet();
+
+        String url = "notes/";
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("book_uuid", bookUUID);
+        body.put("content", content);
+
+        HttpRequest<?> request = HttpRequest.POST(url, body)
                 .header("Authorization", "Bearer " + authKey)
                 .header("Content-Type", "application/json");
 

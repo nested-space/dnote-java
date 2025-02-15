@@ -52,34 +52,47 @@
 
         <h1 class="text-2xl font-bold mb-4">Task Details</h1>
 
-        <form action="/tasks/edit" method="post" onsubmit="return validateForm(event)">
-            <input type="hidden" name="uuid" value="{{ note.uuid }}">
+        <form action="/tasks/add" method="post" onsubmit="return validateForm(event)">
+            <input type="hidden" name="uuid">
 
-            <textarea class="w-full p-2 border rounded" name="message" placeholder="Enter message here">{{ note.message }}</textarea>
+            <textarea class="w-full p-2 border rounded" name="message" placeholder="Enter message here"></textarea>
 
             <div class="grid grid-cols-2 gap-4 mt-4">
                 <div>
                     <h2 class="text-lg font-semibold">When is it due?</h2>
-                    <input type="date" class="border p-2 rounded" name="neededBy" value="{{ note.neededBy }}">
+                    <input type="date" class="border p-2 rounded" name="neededBy" value="{{ today }}">
                 </div>
                 <div>
                     <h2 class="text-lg font-semibold">Is it waiting?</h2>
                     <label class="flex items-center">
-                        <input type="checkbox" class="form-checkbox" name="isWaiting" {% if note.isWaiting %}checked{%
-                               endif %}>
+                        <input type="checkbox" class="form-checkbox" name="isWaiting" value="true">
                         <span class="ml-2">Waiting</span>
                     </label>
                 </div>
             </div>
 
-            <div class="mt-4 flex justify-end">
+            <div class="mt-4 flex justify-between">
+                <a href="/tasks"
+                        class="bg-red-500 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-lg shadow">
+                    Cancel
+                </a>
                 <button id="submitBtn" type="submit"
-                        class="bg-blue-500 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-600">Submit
+                        class="bg-blue-500 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-lg shadow">
+                    Submit
                 </button>
             </div>
         </form>
     </div>
 </div>
+
+<script>
+    document.querySelector("form").addEventListener("submit", function(event) {
+        event.preventDefault(); // Stop form submission for debugging
+        const formData = new FormData(event.target);
+        console.log(Object.fromEntries(formData.entries())); // Log form data
+        event.target.submit(); // Resume submission
+    });
+</script>
 
 </body>
 </html>

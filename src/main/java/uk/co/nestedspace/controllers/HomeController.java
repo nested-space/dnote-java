@@ -17,21 +17,5 @@ public class HomeController {
     public Map<String, Object> index() {
         return Collections.emptyMap(); // No dynamic data needed
     }
-
-    @Get("/debug-static")
-    public String debugStatic() {
-        File staticDir = new File("src/main/resources/static/images/");
-        StringBuilder sb = new StringBuilder("Files in static/images: <br>");
-
-        if (staticDir.exists() && staticDir.isDirectory()) {
-            for (File file : staticDir.listFiles()) {
-                sb.append(file.getName()).append("<br>");
-            }
-        } else {
-            sb.append("Directory not found!");
-        }
-
-        return sb.toString();
-    }
 }
 

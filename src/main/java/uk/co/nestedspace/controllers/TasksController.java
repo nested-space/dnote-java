@@ -12,13 +12,13 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
-@Controller("/todo")
-public class TodoController {
+@Controller("/tasks")
+public class TasksController {
 
     @Inject
     private DnoteService dnoteService;
 
-    @View("todo")
+    @View("tasks")
     @Get("/")
     public Single<Map<String, Object>> getNotes() {
         return dnoteService.fetchNotes()

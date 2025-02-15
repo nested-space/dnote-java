@@ -7,7 +7,7 @@ import java.util.Locale;
 
 public class Note {
 
-    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM yy", Locale.ENGLISH);
+    public static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd MMM yy", Locale.ENGLISH);
     private static final String SEPARATOR = " >>> ";
     private static final String WAIT_FLAG = "(WAITING)";
 
@@ -17,14 +17,21 @@ public class Note {
 
     // No API endpoint to update these
     private final String uuid;
-    private final int usn;
-    private final Book book;
+    private int usn;
+    private Book book;
 
     public Note(String uuid, String content, int usn, Book book) {
         this.uuid = uuid;
         this.usn = usn;
         this.book = book;
         parseContent(content);
+    }
+
+    public Note(String uuid, String message, boolean isWaiting, LocalDate due){
+        this.uuid = uuid;
+        this.message = message;
+        this.isWaiting = isWaiting;
+        this.neededBy = due;
     }
 
     public boolean isWaiting() {
@@ -41,7 +48,7 @@ public class Note {
 
     public String getContent() {
         String waitingString = isWaiting ? WAIT_FLAG + SEPARATOR : "";
-        return waitingString + neededBy.format(formatter) + SEPARATOR + message;
+        return waitingString + neededBy.format(DATE_FORMAT) + SEPARATOR + message;
     }
 
     public String getMessage() {
@@ -61,7 +68,7 @@ public class Note {
     }
 
     public String getDateAsString(){
-        return neededBy.format(formatter);
+        return neededBy.format(DATE_FORMAT);
     }
 
     public void setContent(boolean isWaiting, LocalDate neededBy, String message){
@@ -97,7 +104,7 @@ public class Note {
         LocalDate date;
 
         try {
-            date = LocalDate.parse(dateString, formatter);
+            date = LocalDate.parse(dateString, DATE_FORMAT);
         } catch (DateTimeParseException e) {
             date = LocalDate.MAX;
         }

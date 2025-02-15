@@ -14,18 +14,17 @@ repositories {
 dependencies {
     annotationProcessor("io.micronaut:micronaut-http-validation")
     annotationProcessor("io.micronaut.serde:micronaut-serde-processor")
+
     implementation("io.micronaut.serde:micronaut-serde-jackson")
     implementation("io.micronaut.views:micronaut-views-pebble")
     implementation("io.micronaut:micronaut-http-client")
 
-    // Micronaut RxJava 3 Integration
     implementation("io.micronaut.rxjava3:micronaut-rxjava3")
-
-    // RxJava 3
     implementation("io.reactivex.rxjava3:rxjava:3.1.7")
 
     runtimeOnly("ch.qos.logback:logback-classic")
-    testImplementation("io.micronaut:micronaut-http-client")
+
+    implementation("io.micronaut:micronaut-http-client")
 }
 
 

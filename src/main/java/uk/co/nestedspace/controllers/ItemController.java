@@ -10,8 +10,8 @@ import uk.co.nestedspace.services.DnoteService;
 
 import java.util.Map;
 
-@Controller("/edit")
-public class NoteController {
+@Controller("/tasks")
+public class ItemController {
 
     @Inject
     private DnoteService dnoteService;

@@ -57,6 +57,10 @@ public class NoteDAO {
                 getBook().factory());
     }
 
+    public static NoteDAO fromNote(Note note){
+        return new NoteDAO(note.getUuid(), note.getContent());
+    }
+
 //    public String update(){
 //
 //    }

@@ -3,11 +3,11 @@ package uk.co.nestedspace.services;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpRequest;
-import io.micronaut.http.HttpResponse;
 import io.micronaut.http.client.HttpClient;
 import io.micronaut.http.client.annotation.Client;
 import io.micronaut.json.JsonMapper;
 import io.micronaut.serde.annotation.Serdeable;
+import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.disposables.Disposable;
 import jakarta.inject.Inject;
@@ -44,7 +44,6 @@ public class DnoteService {
      * Authenticate with Dnote API and get the authentication key.
      */
     public Single<String> authenticate() {
-        System.out.println("Authenticating");
         AuthResponse cachedToken = loadAuthToken();
         if (cachedToken != null && (System.currentTimeMillis() / 1000) < cachedToken.getExpires_at()) {
             return Single.just(cachedToken.getKey());
@@ -122,10 +121,9 @@ public class DnoteService {
                 .onErrorReturn(throwable -> new NoteDAO("", "Error fetching Note from API"));
     }
 
-    public Disposable updateNoteByUUID(NoteDAO note) {
+    public Completable updateNoteContentByUUID(NoteDAO note) {
         String authKey = authenticate().blockingGet();
 
-        System.out.println("Doing it");
         String url = "notes/" + note.getUuid();
 
         Map<String, Object> body = new HashMap<>();
@@ -137,7 +135,21 @@ public class DnoteService {
 
         return Single.fromPublisher(httpClient.retrieve(request))
                 .map(responseBody -> jsonMapper.readValue(responseBody, NoteDAO.class))
-                .subscribe();
+                .ignoreElement();
+    }
+
+    public Completable deleteTaskById(String uuid) {
+        String authKey = authenticate().blockingGet();
+
+        String url = "notes/" + uuid;
+
+        HttpRequest<?> request = HttpRequest.DELETE(url)
+                .header("Authorization", "Bearer " + authKey)
+                .header("Content-Type", "application/json");
+
+        return Single.fromPublisher(httpClient.retrieve(request))
+                .map(responseBody -> jsonMapper.readValue(responseBody, NoteDAO.class))
+                .ignoreElement();
     }
 
     private boolean isAuthError(Throwable throwable) {

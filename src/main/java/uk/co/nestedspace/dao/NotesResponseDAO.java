@@ -8,24 +8,24 @@ import java.util.List;
 
 @Serdeable.Deserializable
 public class NotesResponseDAO {
-    private List<NoteDAO> noteDAOS;
+    private List<NoteResponseDAO> noteResponseDAOS;
     private int total;
 
     // Getters and Setters
-    public List<NoteDAO> getNotes() { return noteDAOS; }
-    public void setNotes(List<NoteDAO> notes) { this.noteDAOS = notes; }
+    public List<NoteResponseDAO> getNotes() { return noteResponseDAOS; }
+    public void setNotes(List<NoteResponseDAO> notes) { this.noteResponseDAOS = notes; }
 
     public int getTotal() { return total; }
     public void setTotal(int total) { this.total = total; }
 
     public List<Note> factory(){
         List<Note> notes = new ArrayList<>();
-        for (NoteDAO noteDAO : this.noteDAOS){
+        for (NoteResponseDAO noteResponseDAO : this.noteResponseDAOS){
             notes.add(new Note(
-                    noteDAO.getUuid(),
-                    noteDAO.getContent(),
-                    noteDAO.getUsn(),
-                    noteDAO.getBook().factory()
+                    noteResponseDAO.getUuid(),
+                    noteResponseDAO.getContent(),
+                    noteResponseDAO.getUsn(),
+                    noteResponseDAO.getBook().factory()
             ));
         }
         return notes;

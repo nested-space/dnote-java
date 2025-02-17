@@ -9,7 +9,7 @@ import io.micronaut.http.annotation.Post;
 import io.micronaut.serde.annotation.Serdeable;
 import io.reactivex.rxjava3.core.Completable;
 import jakarta.inject.Inject;
-import uk.co.nestedspace.dao.NoteDAO;
+import uk.co.nestedspace.dao.NoteResponseDAO;
 import uk.co.nestedspace.models.Note;
 import uk.co.nestedspace.services.DnoteService;
 import java.net.URI;
@@ -29,9 +29,7 @@ public class EditController {
                 Boolean.parseBoolean(form.getIsWaiting()),
                 LocalDate.parse(form.getNeededBy()));
 
-        System.out.println(note.getContent());
-
-        Completable result = dnoteService.updateNoteContentByUUID(NoteDAO.fromNote(note));
+        Completable result = dnoteService.updateNoteContentByUUID(NoteResponseDAO.fromNote(note));
         result.blockingAwait();  // Don't redirect until operation is complete
 
         return HttpResponse.redirect(URI.create("/tasks"));

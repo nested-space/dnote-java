@@ -13,9 +13,7 @@ import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Single;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
-import uk.co.nestedspace.dao.NoteDAO;
-import uk.co.nestedspace.dao.NotesResponseDAO;
-import uk.co.nestedspace.dao.SimpleBookDAO;
+import uk.co.nestedspace.dao.*;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -25,6 +23,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @Singleton
 public class DnoteService {
@@ -36,7 +35,7 @@ public class DnoteService {
     private String password;
 
     private final HttpClient httpClient;
-    private final JsonMapper jsonMapper; // 👈 Use Micronaut's JSON mapper
+    private final JsonMapper jsonMapper;
 
     @Inject
     public DnoteService(@Client("${server.address}") HttpClient httpClient, JsonMapper jsonMapper) {
@@ -122,20 +121,18 @@ public class DnoteService {
                 .onErrorReturn(throwable -> new NotesResponseDAO());
     }
 
-    public Single<NoteDAO> fetchNoteByUUID(String uuid) {
+    public Single<NoteResponseDAO> fetchNoteByUUID(String uuid) {
         return authenticate().flatMap(token -> fetchNoteByUUIDWithToken(token, uuid));
     }
 
-    private Single<NoteDAO> fetchNoteByUUIDWithToken(String authKey, String uuid) {
+    private Single<NoteResponseDAO> fetchNoteByUUIDWithToken(String authKey, String uuid) {
         String url = "notes/" + uuid;
         HttpRequest<?> request = HttpRequest.GET(url)
                 .header("Authorization", "Bearer " + authKey)
                 .header("Content-Type", "application/json");
 
         return Single.fromPublisher(httpClient.retrieve(request))
-                .map(responseBody -> {
-                    return jsonMapper.readValue(responseBody, NoteDAO.class);
-                })
+                .map(responseBody -> jsonMapper.readValue(responseBody, NoteResponseDAO.class))
                 .onErrorResumeNext(throwable -> {
                     if (isAuthError(throwable)) {
                         invalidateCachedToken();
@@ -143,34 +140,37 @@ public class DnoteService {
                     }
                     return Single.error(throwable);
                 })
-                .onErrorReturn(throwable -> new NoteDAO("", "Error fetching Note from API"));
+                .onErrorReturn(throwable -> {
+                    NoteResponseDAO dao = new NoteResponseDAO();
+                    dao.setUuid("Error loading Note");
+                    dao.setContent(throwable.getMessage() + "\n" + throwable.getCause());
+                    return dao;
+                });
     }
 
-    public Completable updateNoteContentByUUID(NoteDAO note) {
+    public Completable updateNoteContentByUUID(NoteResponseDAO note) {
         String authKey = authenticate().blockingGet();
-
         String url = "notes/" + note.getUuid();
 
         Map<String, Object> body = new HashMap<>();
         body.put("content", note.getContent());
         body.put("public", true);
+
         HttpRequest<?> request = HttpRequest.PATCH(url, body)
                 .header("Authorization", "Bearer " + authKey)
                 .header("Content-Type", "application/json");
 
         return Single.fromPublisher(httpClient.retrieve(request))
-                .map(responseBody -> jsonMapper.readValue(responseBody, NoteDAO.class))
-                .ignoreElement();
+                .map(responseBody -> jsonMapper.readValue(responseBody, NoteResponseDAO.class))
+                .ignoreElement()
+                .doOnError(error -> System.err.println("Error in updateNoteContentByUUID: " + error.getMessage()));
     }
 
     public Completable addTask(String bookUUID, String content) throws IOException {
         String authKey = authenticate().blockingGet();
-
         String url = "notes";
 
-        Map<String, Object> body = new HashMap<>();
-        body.put("book_uuid", bookUUID);
-        body.put("content", content);
+        NoteRequestDAO body = new NoteRequestDAO(bookUUID, content, true);
 
         HttpRequest<?> request = HttpRequest.create(HttpMethod.POST, url)
                 .body(body)
@@ -178,8 +178,10 @@ public class DnoteService {
                 .header("Content-Type", "application/json");
 
         return Single.fromPublisher(httpClient.retrieve(request))
-                .map(responseBody -> jsonMapper.readValue(responseBody, NoteDAO.class))
-                .ignoreElement();
+                .map(responseBody -> jsonMapper.readValue(responseBody, NoteResultWrapper.class).getResult())
+                .delay(3, TimeUnit.SECONDS)
+                .flatMapCompletable(this::updateNoteContentByUUID)
+                .doOnError(error -> System.err.println("Error in addTask: " + error.getMessage()));
     }
 
     public Completable deleteTaskById(String uuid) {
@@ -192,7 +194,7 @@ public class DnoteService {
                 .header("Content-Type", "application/json");
 
         return Single.fromPublisher(httpClient.retrieve(request))
-                .map(responseBody -> jsonMapper.readValue(responseBody, NoteDAO.class))
+                .map(responseBody -> jsonMapper.readValue(responseBody, NoteResponseDAO.class))
                 .ignoreElement();
     }
 
@@ -205,7 +207,7 @@ public class DnoteService {
             String json = jsonMapper.writeValueAsString(authResponse);
             Files.write(Paths.get("dnote_token.json"), json.getBytes());
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("Error in addTask: " + e.getMessage());
         }
     }
 
@@ -217,7 +219,7 @@ public class DnoteService {
                 return jsonMapper.readValue(json, AuthResponse.class);
             }
         } catch (IOException e) {
-            e.getMessage();
+            System.err.println("Error in addTask: " + e.getMessage());
         }
         return null;
     }
@@ -226,7 +228,7 @@ public class DnoteService {
         try {
             Files.deleteIfExists(Paths.get("dnote_token.json"));
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("Error in addTask: " + e.getMessage());
         }
     }
 

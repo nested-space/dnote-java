@@ -2,24 +2,36 @@ package uk.co.nestedspace.dao;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.micronaut.serde.annotation.Serdeable;
+import io.micronaut.core.annotation.Nullable;
 import uk.co.nestedspace.models.Note;
 
 @Serdeable.Deserializable
-public class NoteDAO {
+public class NoteResponseDAO {
+    @Nullable
     private String uuid;
-    private String createdAt;
-    private String updatedAt;
-    private String content;
-    private int addedOn;
-    private boolean isPublic;
-    private int usn;
-    private SimpleBookDAO book;
-    private UserDAO user;
 
-    public NoteDAO(String uuid, String content){
-        this.uuid = uuid;
-        this.content = content;
-    }
+    @Nullable
+    private String createdAt;
+
+    @Nullable
+    private String updatedAt;
+
+    private String content;
+
+    @Nullable
+    private int addedOn;
+
+    @JsonProperty("public")
+    private boolean isPublic;
+
+    @Nullable
+    private int usn;
+
+    @Nullable
+    private SimpleBookDAO book;
+
+    @Nullable
+    private UserDAO user;
 
     // Getters and Setters
     public String getUuid() { return uuid; }
@@ -57,8 +69,11 @@ public class NoteDAO {
                 getBook().factory());
     }
 
-    public static NoteDAO fromNote(Note note){
-        return new NoteDAO(note.getUuid(), note.getContent());
+    public static NoteResponseDAO fromNote(Note note){
+        NoteResponseDAO noteResponseDAO = new NoteResponseDAO();
+        noteResponseDAO.setUuid(note.getUuid());
+        noteResponseDAO.setContent(note.getContent());
+        return noteResponseDAO;
     }
 
 //    public String update(){

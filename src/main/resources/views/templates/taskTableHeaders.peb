@@ -1,0 +1,20 @@
+<thead class="bg-gray-50">
+    <tr>
+        <th class="px-6 py-3 w-2/12 hidden md:table-cell text-left text-base font-medium text-gray-500 uppercase tracking-wider"
+            scope="col">
+            Due
+        </th>
+        <th class="px-6 py-3 w-6/12 text-left text-base font-medium text-gray-500 uppercase tracking-wider"
+            scope="col">
+            Content
+        </th>
+        <th class="px-6 py-3 w-2/12 hidden lg:table-cell text-left text-base font-medium text-gray-500 uppercase tracking-wider"
+            scope="col">
+            Book
+        </th>
+        <th class="px-6 py-3 w-2/12 hidden sm:table-cell text-right text-base font-medium text-gray-500 uppercase tracking-wider"
+            scope="col">
+            Actions
+        </th>
+    </tr>
+</thead>

@@ -1,0 +1,19 @@
+<tbody class="bg-white divide-y divide-gray-200">
+    <tr>
+        <td class="px-6 py-4 hidden md:table-cell text-base text-gray-500 {{ (note.isOverdue) ? 'text-red-600 font-semibold' : 'text-gray-700' }}">
+            {{ note.dateAsString }}
+        </td>
+        <td class="px-6 py-4 text-sm md:text-base text-gray-500">
+            <div class="flex justify-between items-center sm:hidden w-full gap-6">
+                <span class="text-sm text-gray-500">{{ note.message }}</span>
+                <span class="text-sm text-gray-700">{% include "templates/taskActions.peb" %}</span>
+            </div>
+
+            <span class="hidden sm:inline">{{ note.message }}</span>
+        </td>
+        <td class="px-6 py-4 hidden lg:table-cell text-base text-gray-500">{{ note.book }}</td>
+        <td class="px-6 py-4 hidden sm:table-cell text-base text-gray-500 text-right">
+            {% include "templates/taskActions.peb" %}
+        </td>
+    </tr>
+</tbody>

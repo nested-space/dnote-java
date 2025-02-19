@@ -1,5 +1,12 @@
 <tbody class="bg-white divide-y divide-gray-200">
-    <tr>
+    <tr class="
+            {% if note.book contains "event >>>" %}
+                event-row
+            {% elseif note.book contains "todo >>>" %}
+                task-row
+            {% endif %}
+            {% if note.isOverdue %}bg-red-100{% endif %}
+            ">
         <td class="px-6 py-4 hidden md:table-cell text-base text-gray-500 {{ (note.isOverdue) ? 'text-red-600 font-semibold' : 'text-gray-700' }}">
             {{ note.dateAsString }}
         </td>

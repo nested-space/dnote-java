@@ -5,6 +5,7 @@ import io.micronaut.core.type.Argument;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpMethod;
 import io.micronaut.http.HttpRequest;
+import io.micronaut.http.HttpResponse;
 import io.micronaut.http.client.HttpClient;
 import io.micronaut.http.client.annotation.Client;
 import io.micronaut.json.JsonMapper;
@@ -14,15 +15,13 @@ import io.reactivex.rxjava3.core.Single;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import uk.co.nestedspace.dao.*;
+import uk.co.nestedspace.models.Note;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 @Singleton
@@ -52,6 +51,9 @@ public class DnoteService {
             return Single.just(cachedToken.getKey());
         }
 
+        System.out.println("Password: " + password);
+        System.out.println("Email: " + email);
+
         AuthRequest authRequest = new AuthRequest(email, password);
         HttpRequest<AuthRequest> request = HttpRequest.POST("signin", authRequest)
                 .header(HttpHeaders.CONTENT_TYPE, "application/json");
@@ -66,7 +68,10 @@ public class DnoteService {
                         return "Auth Response Body is empty!";
                     }
                 })
-                .onErrorReturn(throwable -> "Authentication Error:" + throwable.getMessage());
+                .onErrorReturn(throwable -> {
+                    System.out.println(throwable.getMessage());
+                    return "Authentication Error:" + throwable.getMessage();
+                });
     }
 
     public Single<List<SimpleBookDAO>> fetchBooks() {
@@ -94,31 +99,45 @@ public class DnoteService {
     }
 
     public Single<NotesResponseDAO> fetchNotes() {
-        return authenticate().flatMap(this::fetchNotesWithToken);
+        String authKey = authenticate().blockingGet();
+        return Single.fromCallable(() -> fetchNotesWithToken(authKey));
     }
 
-    private Single<NotesResponseDAO> fetchNotesWithToken(String authKey) {
-        HttpRequest<?> request = HttpRequest.GET("notes")
+    private NotesResponseDAO fetchNotesWithToken(String authKey) {
+        List<NoteResponseDAO> allNotes = new ArrayList<>();
+        int currentPage = 1;
+        int totalNotes = 0;
+
+        while (true) {
+            NotesResponseDAO response = fetchNotesPage(authKey, currentPage);
+            if (response.getNotes() == null || response.getNotes().isEmpty()) {
+                break; // No more notes to fetch
+            }
+            allNotes.addAll(response.getNotes());
+            totalNotes = response.getTotal();
+            if (allNotes.size() >= totalNotes) {
+                break; // All notes have been fetched
+            }
+            currentPage++;
+        }
+
+        NotesResponseDAO aggregatedResponse = new NotesResponseDAO();
+        aggregatedResponse.setNotes(allNotes);
+        aggregatedResponse.setTotal(totalNotes);
+        return aggregatedResponse;
+    }
+
+    private NotesResponseDAO fetchNotesPage(String authKey, int page) {
+        HttpRequest<?> request = HttpRequest.GET("notes?page=" + page)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + authKey);
-
-        return Single.fromPublisher(httpClient.exchange(request, String.class))
-                .map(response -> {
-                    String rawJson = response.body();
-
-                    try {
-                        return jsonMapper.readValue(rawJson, NotesResponseDAO.class);
-                    } catch (Exception e) {
-                        return new NotesResponseDAO();
-                    }
-                })
-                .onErrorResumeNext(throwable -> {
-                    if (isAuthError(throwable)) {
-                        invalidateCachedToken();
-                        return authenticate().flatMap(this::fetchNotesWithToken);
-                    }
-                    return Single.error(throwable);
-                })
-                .onErrorReturn(throwable -> new NotesResponseDAO());
+        try {
+            return Single.fromPublisher(httpClient.retrieve(request))
+                    .map(responseBody -> jsonMapper.readValue(responseBody, NotesResponseDAO.class))
+                    .blockingGet();
+        } catch (Exception e) {
+            // Handle exceptions such as IO errors or JSON parsing errors
+            return new NotesResponseDAO();
+        }
     }
 
     public Single<NoteResponseDAO> fetchNoteByUUID(String uuid) {

@@ -4,7 +4,7 @@ plugins {
     id("io.micronaut.aot") version "4.4.4"
 }
 
-version = "0.3"
+version = "0.4"
 group = "uk.co.nestedspace"
 
 repositories {

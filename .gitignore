@@ -16,3 +16,5 @@ out/
 
 # Don't upload auth tokens to github...
 dnote_token.json
+env
+
